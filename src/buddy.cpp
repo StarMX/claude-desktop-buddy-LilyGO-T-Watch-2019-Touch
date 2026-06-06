@@ -157,9 +157,9 @@ void buddySetPeek(bool peek) {
 // clock). Bypasses tick gating and the sprite fillRect — caller owns
 // clearing. Advances the frame counter so animation runs even when
 // buddyTick is bypassed.
-// Landscape clock callsite — always 1×.
+// 240×240 横屏有足够空间，使用 2× 缩放与竖屏主界面一致。
 void buddyRenderTo(TFT_eSPI* tgt, uint8_t personaState) {
-  uint8_t prevS = _scale; _scale = 1;
+  uint8_t prevS = _scale; _scale = 2;
   if (personaState >= 7) personaState = B_IDLE;
   uint32_t now = millis();
   if ((int32_t)(now - nextTickAt) >= 0) { nextTickAt = now + TICK_MS; tickCount++; }

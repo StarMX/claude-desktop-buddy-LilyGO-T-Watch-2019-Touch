@@ -387,9 +387,9 @@ static void clockUpdateOrient() {
     // gravity so the cradle works either way up. Need a strong tilt
     // for the 1↔3 swap so handling jitter doesn't flip it; otherwise
     // hold whatever we last had (or 1 from boot).
-    if (clockOrient == 0) clockOrient = (ax >= 0) ? 1 : 3;
-    if      (ax >  0.5f && clockOrient != 1) clockOrient = 1;
-    else if (ax < -0.5f && clockOrient != 3) clockOrient = 3;
+    if (clockOrient == 0) clockOrient = (ax >= 0) ? 3 : 1;
+    if      (ax >  0.5f && clockOrient != 3) clockOrient = 3;
+    else if (ax < -0.5f && clockOrient != 1) clockOrient = 1;
     return;
   }
   // Dual threshold: strict to enter (must be clearly sideways), loose to
@@ -402,7 +402,7 @@ static void clockUpdateOrient() {
   if (side) { if (orientFrames < 20) orientFrames++; }
   else      { if (orientFrames > -10) orientFrames--; }
   if (clockOrient == 0 && orientFrames >= 15) {
-    clockOrient = (ax > 0) ? 1 : 3;
+    clockOrient = (ax > 0) ? 3 : 1;
   } else if (clockOrient != 0 && orientFrames <= -8) {
     clockOrient = 0;
   } else if (clockOrient != 0 && side) {
@@ -410,7 +410,7 @@ static void clockUpdateOrient() {
     // `side` never drops and the exit-via-0 path can't fire. Watch for
     // ax sign disagreeing with the stored orientation.
     static int8_t swapFrames = 0;
-    uint8_t want = (ax > 0) ? 1 : 3;
+    uint8_t want = (ax > 0) ? 3 : 1;
     if (want != clockOrient) { if (++swapFrames >= 8) { clockOrient = want; swapFrames = 0; } }
     else swapFrames = 0;
   }
@@ -427,27 +427,24 @@ static const char* const DOW[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
 static uint8_t clockDow() { return _clkTm.getWeek() % 7; }
 static void drawClock() {
   const Palette& p = characterPalette();
-  char hm[6]; snprintf(hm, sizeof(hm), "%02u:%02u", _clkTm.getHour(), _clkTm.getMinute());
-  char ss[4]; snprintf(ss, sizeof(ss), ":%02u", _clkTm.getSecond());
+  char hms[10]; snprintf(hms, sizeof(hms), "%02u:%02u:%02u", _clkTm.getHour(), _clkTm.getMinute(), _clkTm.getSecond());
   uint8_t mi = (_clkTm.getMonth() >= 1 && _clkTm.getMonth() <= 12) ? _clkTm.getMonth() - 1 : 0;
   char dl[8]; snprintf(dl, sizeof(dl), "%s %02u", MON[mi], _clkTm.getDay());
 
   if (clockOrient == 0) {
     paintedOrient = 0;
-    // Bottom half — buddy naturally lives at y=0..82, GIF peeks at top
-    // via peek mode. Clearing from 90 leaves both untouched.
+    // 下半部分 — 宠物自然位于 y=0..82，GIF 在顶部
+    // 通过 peek 模式显示。从 90 开始清除不会影响两者。
     spr.fillRect(0, 90, W, H - 90, p.bg);
     spr.setTextDatum(MC_DATUM);
-    spr.setTextSize(4); spr.setTextColor(p.text, p.bg);    spr.drawString(hm, CX, 140);
-    spr.setTextSize(2); spr.setTextColor(p.textDim, p.bg); spr.drawString(ss, CX, 175);
-    spr.setTextSize(1);                                     spr.drawString(dl, CX, 200);
+    spr.setTextSize(3); spr.setTextColor(p.text, p.bg);    spr.drawString(hms, CX, 140);
+    spr.setTextSize(1);                                     spr.drawString(dl, CX, 175);
     spr.setTextDatum(TL_DATUM);
     return;
   }
 
   // 横屏：240×240 直接绘制到 LCD。仅在切换方向时全屏填充；
-  // 之后文字背景色单元格自行重绘，宠物区域（约 90×50）每帧
-  // fillRect 重绘——足够小不会闪烁。
+  // 布局：上方宠物居中，下方时间日期居中（与竖屏逻辑一致）。
   tft.setRotation(clockOrient);
   static uint8_t lastSec = 0xFF;
   bool repaint = paintedOrient != clockOrient;
@@ -458,34 +455,31 @@ static void drawClock() {
   if (repaint || _clkTm.getSecond() != lastSec) {
     lastSec = _clkTm.getSecond();
     char wdl[12]; snprintf(wdl, sizeof(wdl), "%s %s %02u", DOW[clockDow()], MON[mi], _clkTm.getDay());
-    char ssl[3]; snprintf(ssl, sizeof(ssl), "%02u", _clkTm.getSecond());
     tft.setTextDatum(MC_DATUM);
-    tft.setTextSize(3); tft.setTextColor(p.text, p.bg);    tft.drawString(hm, 170, 42);
-    tft.setTextSize(2); tft.setTextColor(p.textDim, p.bg); tft.drawString(ssl, 170, 72);
-                                                                  tft.drawString(wdl, 170, 102);
+    tft.setTextSize(2); tft.setTextColor(p.textDim, p.bg); tft.drawString(wdl, CX, 180);
+    tft.setTextSize(3); tft.setTextColor(p.text, p.bg);    tft.drawString(hms, CX, 210);
     tft.setTextDatum(TL_DATUM);
     tft.setTextSize(1);
   }
 
-  // 宠物在左侧 5fps 渲染。清除区域包含身体上方的粒子层
-  // （y<30）——物种绘制 Zzz/爱心通过 BUDDY_Y_OVERLAY=6，
-  // 不经过 _yb，所以框必须覆盖它。
+  // 宠物在上方 5fps 渲染。先渲染到 sprite 缓冲区再一次性
+  // 推送到 TFT，避免直接在 TFT 上清除+绘制导致闪烁。
   static uint32_t lastPetTick = 0;
   if (millis() - lastPetTick >= 200) {
     lastPetTick = millis();
     if (buddyMode) {
-      // ASCII 字形不会自清除；每帧擦除完整 buddy 直接渲染区域。物种
-      // 硬编码 BUDDY_X_CENTER=120 / BUDDY_Y_OVERLAY=6 用于粒子，
-      // 保持竖屏坐标，只切换绘制表面——宠物落在
-      // 横屏左上角，正是我们想要的位置。
-      tft.fillRect(0, 0, BUDDY_DIRECT_RENDER_W, BUDDY_DIRECT_RENDER_H, p.bg);
-      buddyRenderTo(&tft, activeState);
+      // 2× 缩放下 buddy 高度约 (30+5*8+12)*2=164px。
+      const int petH = 164;
+      spr.fillRect(0, 0, W, petH, p.bg);
+      buddyRenderTo(&spr, activeState);
+      tft.pushImage(0, 0, W, petH, (uint16_t*)spr.getPointer());
     } else {
-      // 全帧 GIF 绘制每个像素（透明→pal.bg），所以
-      // 每帧清除只会在擦除和最后扫描线之间产生可见黑闪。
-      // paintedOrient 变化时的 fillScreen 已覆盖周围区域。
+      // 全帧 GIF 以全尺寸渲染（240×240 横屏有足够空间）。
+      const int petH = 130;
+      spr.fillRect(0, 0, W, petH, p.bg);
       characterSetState(activeState);
-      characterRenderTo(&tft, 57, 45);
+      characterRenderTo(&spr, CX, 60);
+      tft.pushImage(0, 0, W, petH, (uint16_t*)spr.getPointer());
     }
   }
   tft.setRotation(0);

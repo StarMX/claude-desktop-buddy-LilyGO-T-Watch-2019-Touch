@@ -125,12 +125,12 @@ static void gifDrawCb(GIFDRAW* d) {
   }
 
   int y = gifY + srcY;
-  if (y < 0 || y >= spr.height()) return;
+  if (y < 0 || y >= _tgt->height()) return;
   int x0 = gifX + d->iX;
   int w  = d->iWidth;
   if (w > 256) w = 256;
   if (x0 < 0) { src -= x0; w += x0; x0 = 0; }
-  if (x0 + w > spr.width()) w = spr.width() - x0;
+  if (x0 + w > _tgt->width()) w = _tgt->width() - x0;
   if (w <= 0) return;
   for (int i = 0; i < w; i++) put(x0 + i, y, src[i]);
 }
@@ -247,15 +247,16 @@ bool characterInit(const char* name) {
 bool characterLoaded() { return loaded; }
 const Palette& characterPalette() { return pal; }
 
-// One-shot half-scale render to an arbitrary surface (tft for the
-// landscape clock). Caller owns clearing. Advances frame timing so
-// animation runs even when characterTick() is bypassed.
+// One-shot render to an arbitrary surface (tft for the landscape clock).
+// Caller owns clearing. Advances frame timing so animation runs even when
+// characterTick() is bypassed. Renders at full scale — 240×240 横屏有足够
+// 空间，不需要 peek 半尺寸。
 void characterRenderTo(TFT_eSPI* tgt, int cx, int cy) {
   if (!gifOpen) return;   // caller opens via characterSetState(activeState)
   TFT_eSPI* prevT = _tgt; bool prevP = peekMode; int px = gifX, py = gifY;
-  _tgt = tgt; peekMode = true;
-  gifX = cx - gifW / 4;
-  gifY = cy - gifH / 4;
+  _tgt = tgt; peekMode = false;
+  gifX = cx - gifW / 2;
+  gifY = cy - gifH / 2;
   uint32_t now = millis();
   if (now >= nextFrameAt) {
     int delayMs = 0;
