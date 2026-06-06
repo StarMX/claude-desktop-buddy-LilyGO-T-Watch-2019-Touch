@@ -473,11 +473,11 @@ static void drawClock() {
   if (millis() - lastPetTick >= 200) {
     lastPetTick = millis();
     if (buddyMode) {
-      // ASCII 字形不会自清除；每帧擦除区域。物种
-      // 硬编码 BUDDY_X_CENTER=67 / BUDDY_Y_OVERLAY=6 用于粒子，
+      // ASCII 字形不会自清除；每帧擦除完整 buddy 直接渲染区域。物种
+      // 硬编码 BUDDY_X_CENTER=120 / BUDDY_Y_OVERLAY=6 用于粒子，
       // 保持竖屏坐标，只切换绘制表面——宠物落在
       // 横屏左上角，正是我们想要的位置。
-      tft.fillRect(0, 0, 115, 90, p.bg);
+      tft.fillRect(0, 0, BUDDY_DIRECT_RENDER_W, BUDDY_DIRECT_RENDER_H, p.bg);
       buddyRenderTo(&tft, activeState);
     } else {
       // 全帧 GIF 绘制每个像素（透明→pal.bg），所以
@@ -680,7 +680,7 @@ void drawInfo() {
     }
 
   } else {
-    _infoHeader(p, y, "CTFT_REDITS", infoPage);
+    _infoHeader(p, y, "CREDITS", infoPage);
     spr.setTextColor(p.textDim, p.bg);
     ln("made by");
     y += 4;

@@ -8,6 +8,11 @@
 void buddyInit();
 void buddyTick(uint8_t personaState);
 void buddyInvalidate();
+// ASCII buddy render bounds at 1× scale. Used by landscape-clock direct
+// rendering so callers clear the same area buddyTick() would clear.
+const int BUDDY_DIRECT_RENDER_W = 240;
+const int BUDDY_DIRECT_RENDER_H = 82;
+
 class TFT_eSPI;
 void buddyRenderTo(TFT_eSPI* tgt, uint8_t personaState);
 void buddySetSpecies(const char* name);

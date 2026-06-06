@@ -74,6 +74,13 @@ inline bool halInit() {
         axp.enableLDO3();
         // LDO2 电压设为 3.3 V（TFT 背光供电）
         axp.setLDO2Voltage(3300);
+        // T-Watch 2019 电池包没有 TS 温度线；保持 TS 测量会让 PMIC
+        // 误判温度异常并影响充电。
+        axp.disableTSPinMeasure();
+        // 启用电池/VBUS ADC 测量，供 battery、DEVICE 页和 BLE status 使用。
+        axp.enableBattDetection();
+        axp.enableVbusVoltageMeasure();
+        axp.enableBattVoltageMeasure();
         // 启用电池充电
         axp.enableCharge();
         // 启用库仑计数器
