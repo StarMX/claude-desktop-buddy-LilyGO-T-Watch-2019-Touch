@@ -1169,17 +1169,15 @@ void loop() {
     }
   }
 
-  // AXP 电源按键（侧面）：短按 = BtnA（确认/切换）。
+  // AXP 电源按键（侧面）：短按 = BtnB（确认/执行）。
   // 长按（6s）通过 AXP 硬件关机。
   if (halPekShortPress()) {
     if (screenOff) {
-      btnAPressed = false;
-      btnALongPressed = false;
-      btnALong = false;
-      swallowBtnA = false;
+      btnBPressed = false;
+      swallowBtnB = false;
       wake();
     } else {
-      btnAPressed = true;
+      btnBPressed = true;
     }
   }
 
