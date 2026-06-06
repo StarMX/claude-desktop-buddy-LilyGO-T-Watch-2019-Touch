@@ -26,10 +26,10 @@ void cjkDrawMixed(TFT_eSprite* spr, const char* text, int x, int y,
 // 若对给定文本调用 `cjkDrawMixed` 所需的像素宽度。适用于水平居中 / 溢出检查。
 int  cjkMeasureMixed(const char* text);
 
-// 每行折行输出的最大 NUL 结尾字节数。紧凑上界：
-// 16 个 ASCII 字符 × 1 字节 = 16，加 NUL = 17；GBK 8 字符 × 2 字节 = 16；
-// 预留至 24 以应对不规则输入。
-#define CJK_ROW_CAP 24
+// 每行折行输出的最大 NUL 结尾字节数。
+// 屏幕宽 240px，x=4 起始，可用 236px：纯 ASCII 39 字符 × 1 字节 = 39；
+// 纯 GBK 19 字符 × 2 字节 = 38。加 NUL 和余量取 44。
+#define CJK_ROW_CAP 44
 
 // 像素与 GBK 感知的折行。将 `in` 拆分为每行 ≤ `maxPx` 像素的行，
 // 绝不在 GBK 双字节对中间断开。`out` 中每行以 NUL 结尾。

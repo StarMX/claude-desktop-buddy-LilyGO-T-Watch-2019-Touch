@@ -946,10 +946,8 @@ void drawHUD() {
   // newest-highlight behave identically.
   static char disp_cjk[16][CJK_ROW_CAP];
   static uint8_t srcOf[16];
-  // x=4 origin means we get W-4 = 131 px of usable width before glyphs would
-  // extend past the sprite's right edge. cjkDrawMixed itself stops one glyph
-  // short of that boundary, so handing this same number to cjkWrapInto keeps
-  // wrap and render math consistent.
+  // x=4 起始，可用像素宽度 W-4=236。cjkDrawMixed 在 sprite 右边界停笔，
+  // cjkWrapInto 用同一数值做折行，保持渲染与折行一致。
   const int max_px = W - 4;
   uint8_t nDisp = 0;
   for (uint8_t i = 0; i < tama.nLines && nDisp < 16; i++) {
