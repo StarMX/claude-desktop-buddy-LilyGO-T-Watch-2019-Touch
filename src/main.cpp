@@ -58,6 +58,7 @@ static bool touchConsumed = false;  // 滑动已消费，不再触发点击
 // 物理按键状态（GPIO36）
 static bool hwBtnDown = false;
 static uint32_t hwBtnDownMs = 0;
+static bool hwWakeConsumed = false;
 // 模拟按键状态（触摸 + PEK + GPIO36 均可触发）
 static bool btnAPressed = false;     // 短触/短按触发
 static bool btnALongPressed = false; // 长触/长按触发
@@ -1108,14 +1109,22 @@ void loop() {
   if (hwNow && !hwBtnDown) {
     hwBtnDown = true;
     hwBtnDownMs = millis();
+    hwWakeConsumed = false;
     if (screenOff) {
+      hwWakeConsumed = true;
       swallowBtnA = true;
       wake();
     }
   } else if (!hwNow && hwBtnDown) {
     hwBtnDown = false;
     uint32_t dur = millis() - hwBtnDownMs;
-    if (dur > 600) {
+    if (hwWakeConsumed) {
+      hwWakeConsumed = false;
+      swallowBtnA = false;
+      btnAPressed = false;
+      btnALongPressed = false;
+      btnALong = false;
+    } else if (dur > 600) {
       btnALongPressed = true;
     } else {
       btnAPressed = true;
@@ -1135,6 +1144,7 @@ void loop() {
       // 触摸唤醒，吞掉这次触摸避免误触发
       swallowBtnA = true;
       swallowBtnB = true;
+      touchConsumed = true;
       wake();
     }
   } else if (nPts > 0 && touching && !touchConsumed) {
@@ -1155,6 +1165,13 @@ void loop() {
       } else {
         btnAPressed = true;
       }
+    } else if (swallowBtnA || swallowBtnB) {
+      swallowBtnA = false;
+      swallowBtnB = false;
+      btnAPressed = false;
+      btnALongPressed = false;
+      btnBPressed = false;
+      btnALong = false;
     }
   }
 
@@ -1162,7 +1179,10 @@ void loop() {
   // 长按（6s）通过 AXP 硬件关机。
   if (halPekShortPress()) {
     if (screenOff) {
-      swallowBtnA = true;
+      btnAPressed = false;
+      btnALongPressed = false;
+      btnALong = false;
+      swallowBtnA = false;
       wake();
     } else {
       btnAPressed = true;

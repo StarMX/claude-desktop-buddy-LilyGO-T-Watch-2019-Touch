@@ -134,6 +134,11 @@ inline bool halInit() {
 
 // 读取 BMA423 加速度计三轴数据（单位：g，内部 m/s² 除以 9.80665f 转换）
 inline void halGetAccel(float &ax, float &ay, float &az) {
+    // 安全默认值：近似竖直静止，避免读失败时调用方使用未初始化栈值。
+    ax = 0.0f;
+    ay = 0.0f;
+    az = 1.0f;
+
     AccelerometerData data;
     if (bma.readData(data)) {
         constexpr float MPS2_TO_G = 1.0f / 9.80665f;
@@ -188,9 +193,11 @@ inline bool halButtonPressed() {
 
 // 检测 AXP202 电源按键短按
 inline bool halPekShortPress() {
-    if (axp.isPekeyShortPressIrq()) {
-        axp.clearIrqStatus();
-        return true;
-    }
-    return false;
+    // XPowersLib 的 is*Irq() 读取缓存；每次轮询前先从芯片刷新 IRQ 状态。
+    axp.getIrqStatus();
+    bool pressed = axp.isPekeyShortPressIrq();
+    // 同时启用了 long-press IRQ；无论是否 short，都清掉本轮已读状态，
+    // 避免旧 IRQ 一直挂起并污染后续短按。
+    axp.clearIrqStatus();
+    return pressed;
 }
